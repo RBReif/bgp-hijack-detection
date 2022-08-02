@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime/pprof"
 	"syscall"
 )
@@ -25,8 +24,8 @@ var flagsString string
 func parseFlags() {
 
 	//output
-	flag.StringVar(&cpuProfileFile, "cpuprofile", "output/cp", "Specifies the file to which a CPU profile shall be written to")
-	flag.StringVar(&memProfileFile, "memprofile", "output/mp", "Specifies the file to which a memory profile shall be written to")
+	flag.StringVar(&cpuProfileFile, "cpuprofile", "../output/cp", "Specifies the file to which a CPU profile shall be written to")
+	flag.StringVar(&memProfileFile, "memprofile", "../output/mp", "Specifies the file to which a memory profile shall be written to")
 
 	//live
 	flag.StringVar(&liveStream, "stream", "https://ris-live.ripe.net/v1/stream/?format=json", "RIS Live firehose url")
@@ -64,18 +63,18 @@ func cleanup() {
 
 }
 
-func createDirectory() {
+//func createDirectory() {   //might not be needed
 
-	newpath := filepath.Join(".", "output")
-	_ = os.MkdirAll(newpath, os.ModePerm)
-	//todo errorhandling
-}
+//	newpath := filepath.Join(".", "output")
+//	_ = os.MkdirAll(newpath, os.ModePerm)
+//todo errorhandling
+//}
 
 func main() {
 	fmt.Println("start")
 
 	parseFlags()
-	createDirectory()
+	//createDirectory()
 	//cpuprofile
 	if cpuProfileFile != "" {
 		f, err := os.Create(cpuProfileFile)
