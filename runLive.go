@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -190,7 +191,45 @@ func (r *risLive) Get() *risMessageData {
 }
 
 func handle(r *risMessageData) {
-	fmt.Println(r.toString())
+	//fmt.Println(r.toString())
+
+	var m message
+	m.timestamp = uint32(r.Timestamp)
+	m.peerID = r.Peer
+
+	complLength := len(r.Withdrawals)
+	if len(r.Announcements) > 0 {
+		complLength = complLength + len(r.Announcements[0].Prefixes)
+	}
+	for i := 0; i < complLength; i++ {
+		var ipnet *net.IPNet
+		var err error
+		if i < len(r.Withdrawals) {
+			m.isAnnouncement = false
+			_, ipnet, err = net.ParseCIDR(r.Withdrawals[i])
+		} else {
+			m.isAnnouncement = true
+			_, ipnet, err = net.ParseCIDR(r.Announcements[0].Prefixes[i-len(r.Withdrawals)])
+			m.aspath = r.DigestedPath
+			if len(r.DigestedPath) > 0 {
+				m.finalDestinationAS = r.DigestedPath[len(r.DigestedPath)-1]
+			} else {
+				fmt.Println(Red("Digested Path length was 0!"))
+				fmt.Println(r.toString())
+				return
+			}
+		}
+		if err != nil {
+			fmt.Println(Red("Could not parse to subnet", err))
+		}
+		m.subnet = *ipnet
+		if m.subnet.IP.To4() != nil {
+			m.subnetAsBits = convertIPtoBits(m.subnet)
+
+			fmt.Println(m.toString())
+			fmt.Println("______________________________________________")
+		}
+	}
 }
 
 func runInLiveMode() {
