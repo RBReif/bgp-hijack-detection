@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/pprof"
 	"syscall"
 )
@@ -20,12 +21,13 @@ var buffer int
 
 //internal
 var flagsString string
+var ipv4T ipv4trieRoot
 
 func parseFlags() {
 
 	//output
-	flag.StringVar(&cpuProfileFile, "cpuprofile", "../output/cp", "Specifies the file to which a CPU profile shall be written to")
-	flag.StringVar(&memProfileFile, "memprofile", "../output/mp", "Specifies the file to which a memory profile shall be written to")
+	flag.StringVar(&cpuProfileFile, "cpuprofile", "output/cp", "Specifies the file to which a CPU profile shall be written to")
+	flag.StringVar(&memProfileFile, "memprofile", "output/mp", "Specifies the file to which a memory profile shall be written to")
 
 	//live
 	flag.StringVar(&liveStream, "stream", "https://ris-live.ripe.net/v1/stream/?format=json", "RIS Live firehose url")
@@ -63,18 +65,26 @@ func cleanup() {
 
 }
 
-//func createDirectory() {   //might not be needed
+func initialize() {
+	fmt.Println(White("Initializing IDP BGP Hijack Detection"))
+	ipv4T = ipv4trieRoot{
+		childZero: &ipv4trie{value: 0, representedNet: []uint8{0}},
+		childOne:  &ipv4trie{value: 1, representedNet: []uint8{1}},
+	}
+}
 
-//	newpath := filepath.Join(".", "output")
-//	_ = os.MkdirAll(newpath, os.ModePerm)
-//todo errorhandling
-//}
+func createDirectory() { //might not be needed
+
+	newpath := filepath.Join(".", "output")
+	_ = os.MkdirAll(newpath, os.ModePerm)
+	//todo errorhandling
+}
 
 func main() {
 	fmt.Println("start")
 
 	parseFlags()
-	//createDirectory()
+	createDirectory()
 	//cpuprofile
 	if cpuProfileFile != "" {
 		f, err := os.Create(cpuProfileFile)
@@ -88,6 +98,8 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+
+	initialize()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

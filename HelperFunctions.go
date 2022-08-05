@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 var (
 	Black   = Color("\033[1;30m%s\033[0m")
@@ -19,4 +22,8 @@ func Color(colorString string) func(...interface{}) string {
 			fmt.Sprint(args...))
 	}
 	return sprint
+}
+
+func arrayToString(a []uint8, delim string) string {
+	return strings.Trim(strings.Replace(fmt.Sprint(a), " ", delim, -1), "[]")
 }

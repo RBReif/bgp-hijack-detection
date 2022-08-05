@@ -13,7 +13,7 @@ type message struct {
 	peerID             string   // uint16   // represents which of the neighboring peers issued the message //todo change into uint? Then strconv.Itoa(int()) for conversion needed
 	timestamp          uint32   // Using unix timestamps.  alternative: time.Time
 	aspath             []uint32 // AS path, as written in the AS-path field of the BGP message, only relevant if announcement
-	alreadyAnnounced   bool
+
 	/*
 		some old peers do not support 4 byte long AS numbers. To be able to communicate with them, the well known AS number
 		23456 was introduced. When this AS number appears in an AS path, there is also the AS4path attribute in such a BGP message. In this attribute

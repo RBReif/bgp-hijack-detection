@@ -225,9 +225,12 @@ func handle(r *risMessageData) {
 		m.subnet = *ipnet
 		if m.subnet.IP.To4() != nil {
 			m.subnetAsBits = convertIPtoBits(m.subnet)
-
-			fmt.Println(m.toString())
 			fmt.Println("______________________________________________")
+
+			fmt.Println(White("Received new Message: ", m.toString()))
+			nodeWhereInserted := *ipv4T.insert(m)
+			fmt.Println(Yellow(" Message was inserted at node: " + nodeWhereInserted.toStringNode()))
+
 		}
 	}
 }
