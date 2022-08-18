@@ -109,7 +109,7 @@ func main() {
 	}()
 
 	for {
-		runInLiveMode()
+		runLivestream()
 	}
 
 	cleanup()

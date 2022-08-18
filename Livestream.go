@@ -225,17 +225,28 @@ func handle(r *risMessageData) {
 		m.subnet = *ipnet
 		if m.subnet.IP.To4() != nil {
 			m.subnetAsBits = convertIPtoBits(m.subnet)
-			fmt.Println("______________________________________________")
-
-			fmt.Println(White("Received new Message: ", m.toString()))
 			nodeWhereInserted := *ipv4T.insert(m)
-			fmt.Println(Yellow(" Message was inserted at node: " + nodeWhereInserted.toStringNode()))
+
+			if m.isAnnouncement {
+				conflictsField := make([]message, 0)
+
+				c := conflicts{
+					referenceIPasField:    convertIPtoBits(m.subnet),
+					referenceAnnouncement: m,
+					conflictingMessages:   conflictsField,
+				}
+				confl := nodeWhereInserted.findConflictsAboveAndSameLevel(c)
+				confl = nodeWhereInserted.findConflictsBelow(confl)
+				if len(confl.conflictingMessages) > 0 {
+					fmt.Println(Green(" Conflict found: " + confl.toString()))
+				}
+			}
 
 		}
 	}
 }
 
-func runInLiveMode() {
+func runLivestream() {
 	r := NewRisLive(liveStream, risClient, buffer)
 	go r.Listen()
 
@@ -246,7 +257,6 @@ func runInLiveMode() {
 				fmt.Println(Red("we have received a message with multiple announcements (regarding json format) with two different values as first prefix: \n", result.toString()))
 			}
 		}
-		//fmt.Println("received this message: \n", result.toString())
 		handle(result)
 	}
 }

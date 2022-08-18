@@ -12,9 +12,8 @@ type ipv4trieRoot struct {
 
 type trie interface {
 	insertMessage(m message, currentDepth uint8) *trie // returns pointer to the node where we ended up inserting the message
-	//findConflictsAboveAndSameLevel(c conflicts) conflicts
-	//findConflictsBelow(c conflicts) conflicts
-
+	findConflictsBelow(c conflicts) conflicts
+	findConflictsAboveAndSameLevel(c conflicts) conflicts
 	toStringNode() string
 	toStringNodeAndSubtrie() string
 }
@@ -85,6 +84,55 @@ func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 		}
 		return nextChild.insertMessage(m, currentDepth+1)
 
+	}
+}
+
+func (prefixTrie *ipv4trie) findConflictsThisLevel(c conflicts) conflicts {
+	if prefixTrie.activeAnnouncments != nil {
+		for i := len(prefixTrie.activeAnnouncments); i > 0; i-- { //we iterate over all announcements. from newest to oldest
+			if c.referenceAnnouncement.finalDestinationAS != prefixTrie.activeAnnouncments[i-1].finalDestinationAS { //it´s not a conflict if the final destination AS is the same
+				//we have found a potential conflict
+
+				alreadyAConflictByDifferentPeer := false
+				for j := 0; j < len(c.conflictingMessages); j++ {
+					if c.conflictingMessages[j].finalDestinationAS == prefixTrie.activeAnnouncments[i-1].finalDestinationAS &&
+						c.conflictingMessages[j].subnet.String() == prefixTrie.activeAnnouncments[i-1].subnet.String() {
+						alreadyAConflictByDifferentPeer = true
+					}
+				}
+				if !alreadyAConflictByDifferentPeer {
+					c.conflictingMessages = append(c.conflictingMessages, prefixTrie.activeAnnouncments[i-1])
+				}
+			}
+		}
+	}
+
+	return c
+}
+
+func (prefixTrie *ipv4trie) findConflictsBelow(c conflicts) conflicts {
+	size, _ := c.referenceAnnouncement.subnet.Mask.Size()
+	if size == len(prefixTrie.representedNet) { // we are not interested in conflicts at the same level as the reference message (they were already found in findConflictsThislevelAndAbove
+		return c
+	}
+	c = prefixTrie.findConflictsThisLevel(c)
+
+	if prefixTrie.childZero != nil {
+		c = prefixTrie.childZero.findConflictsBelow(c)
+	}
+	if prefixTrie.childOne != nil {
+		c = prefixTrie.childOne.findConflictsBelow(c)
+	}
+	return c
+}
+
+func (prefixTrie *ipv4trie) findConflictsAboveAndSameLevel(c conflicts) conflicts {
+	c = prefixTrie.findConflictsThisLevel(c)
+
+	if prefixTrie.parent != nil {
+		return prefixTrie.parent.findConflictsAboveAndSameLevel(c) //we go recursively up to the root/ to less specific subnets
+	} else { //we are at the first bit.
+		return c
 	}
 }
 

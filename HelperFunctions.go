@@ -27,3 +27,14 @@ func Color(colorString string) func(...interface{}) string {
 func arrayToString(a []uint8, delim string) string {
 	return strings.Trim(strings.Replace(fmt.Sprint(a), " ", delim, -1), "[]")
 }
+
+func IsContainedInUint32(slice []uint32, val uint32) bool { //a generic method to find out if a specific uint32 is contained in a slice of uint32
+	result := false
+	for i := 0; i < len(slice); i++ {
+		if slice[i] == val {
+			result = true
+			break
+		}
+	}
+	return result
+}
