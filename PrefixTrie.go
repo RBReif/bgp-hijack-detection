@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 type ipv4trieRoot struct {
@@ -42,6 +43,13 @@ func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 	if int(currentDepth) == subnetMaskLength { // right position in trie
 
 		for i := 0; i < len(prefixTrie.activeAnnouncments); i++ {
+
+			if m.isAnnouncement {
+				if prefixTrie.activeAnnouncments[i].finalDestinationAS == m.finalDestinationAS {
+					m.alreadyAnnounced = true // to prevent the same (still active) conflict to be found over and over again
+				}
+			}
+
 			if prefixTrie.activeAnnouncments[i].peerID == m.peerID {
 				prefixTrie.activeAnnouncments = append(prefixTrie.activeAnnouncments[:i], prefixTrie.activeAnnouncments[i+1:]...) //if there was an announcement before from same peer and with another final destination, we update the message
 			}
@@ -113,9 +121,16 @@ func (prefixTrie *ipv4trie) findConflictsThisLevel(c conflicts) conflicts {
 func (prefixTrie *ipv4trie) findConflictsBelow(c conflicts) conflicts {
 	size, _ := c.referenceAnnouncement.subnet.Mask.Size()
 	if size == len(prefixTrie.representedNet) { // we are not interested in conflicts at the same level as the reference message (they were already found in findConflictsThislevelAndAbove
-		return c
+		for i := 0; i < len(prefixTrie.activeAnnouncments); i++ {
+			if prefixTrie.activeAnnouncments[i].peerID == c.referenceAnnouncement.peerID {
+				if prefixTrie.activeAnnouncments[i].alreadyAnnounced {
+					return c
+				}
+			}
+		}
+	} else {
+		c = prefixTrie.findConflictsThisLevel(c)
 	}
-	c = prefixTrie.findConflictsThisLevel(c)
 
 	if prefixTrie.childZero != nil {
 		c = prefixTrie.childZero.findConflictsBelow(c)
@@ -127,6 +142,17 @@ func (prefixTrie *ipv4trie) findConflictsBelow(c conflicts) conflicts {
 }
 
 func (prefixTrie *ipv4trie) findConflictsAboveAndSameLevel(c conflicts) conflicts {
+	size, _ := c.referenceAnnouncement.subnet.Mask.Size()
+	if size == len(prefixTrie.representedNet) {
+		for i := 0; i < len(prefixTrie.activeAnnouncments); i++ {
+			if prefixTrie.activeAnnouncments[i].peerID == c.referenceAnnouncement.peerID {
+				if prefixTrie.activeAnnouncments[i].alreadyAnnounced {
+					return c //if we land here, there was already the same announcement from the same peer and we already found all respective conflicts
+				}
+			}
+		}
+	}
+
 	c = prefixTrie.findConflictsThisLevel(c)
 
 	if prefixTrie.parent != nil {
@@ -161,4 +187,61 @@ func (prefixTrie *ipv4trie) toStringNodeAndSubtrie() string {
 		result = result + "\n ChildOne " + prefixTrie.childOne.toStringNodeAndSubtrie()
 	}
 	return result
+}
+
+func insertAndFindConflicts(m message, findConflicts bool) {
+	if stopT.IsZero() || time.Now().Before(stopT) {
+		subnetSize, _ := m.subnet.Mask.Size()
+		if m.subnet.IP.To4() != nil && len(m.subnetAsBits) <= 32 && subnetSize <= 32 {
+			o, _ := m.subnet.Mask.Size()
+			if o > 0 {
+
+				nodeWhereInserted := *ipv4T.insert(m)
+				//fmt.Println("going to insert message: \n", m.toString(), "\n")
+
+				if m.isAnnouncement && findConflicts {
+					conflictsField := make([]message, 0)
+
+					c := conflicts{
+						referenceIPasField:    convertIPtoBits(m.subnet),
+						referenceAnnouncement: m,
+						conflictingMessages:   conflictsField,
+					}
+					confl := nodeWhereInserted.findConflictsAboveAndSameLevel(c)
+					confl = nodeWhereInserted.findConflictsBelow(confl)
+					if len(confl.conflictingMessages) > 0 {
+						countConflicts = countConflicts + len(confl.conflictingMessages)
+						if countConflictTriggers == 100*countConflictTriggers100 {
+							countConflictTriggers100++
+							fmt.Println(White("Messages that triggered conflicts so far: ", countConflictTriggers))
+						}
+						countConflictTriggers++
+
+						if verbose {
+							fmt.Println(White(confl.toString()))
+						}
+					}
+				}
+
+				if countInserted == 10000*countInserted10000 {
+					countInserted10000++
+					fmt.Println(Green("inserted messages so far: ", countInserted))
+				}
+				countInserted++
+
+			} else {
+				fmt.Println(Red("subnet length = 0. Will not insert: ", m.toString()))
+			}
+		} else {
+			if m.subnet.IP.To4() != nil {
+				fmt.Println(Red("IPv4 with more than 32 bits: \n", m.toString()))
+			}
+			if m.subnet.IP.To16() != nil {
+				//[TODO for possible further development]: IPv6 Trie
+			}
+		}
+	} else {
+		cleanup()
+	}
+
 }

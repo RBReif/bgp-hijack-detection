@@ -123,7 +123,7 @@ restart:
 	for {
 		var body io.ReadCloser
 
-		fmt.Println("Reading from the firehose...")
+		fmt.Println(Teal("Reading from the firehose..."))
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", r.url, nil)
 		if err != nil {
@@ -132,23 +132,20 @@ restart:
 		//req.Header.Set("User-Agent", r.ua)
 		filter := "{\"type\": \"UPDATE\""
 		filter = filter + "}"
-		fmt.Println(filter)
 
 		req.Header.Add("X-RIS-Subscribe", filter) //Some times the RIPE RIS livestream has problems when answering if there is this header present
 		//todo check if needed
 
-		fmt.Println("xris: ", req.Header.Get("X-RIS-Subscribe"))
-
-		//
-		fmt.Println(req.Header)
+		fmt.Println(Teal("Request Header: ", req.Header))
 		resp, err := client.Do(req)
-
 		if err != nil {
 			fmt.Println(Red("failed to open the http client for action: %v", err))
 			return
 		}
-		fmt.Println(resp.Header)
-		fmt.Println(resp)
+		fmt.Println(Teal("Response Header: ", resp.Header))
+		fmt.Println()
+		fmt.Println(Teal("Live Connection established...\n"))
+
 		defer resp.Body.Close()
 		body = resp.Body
 
@@ -195,7 +192,12 @@ func handle(r *risMessageData) {
 
 	var m message
 	m.timestamp = uint32(r.Timestamp)
-	m.peerID = r.Peer
+	peerip := r.Peer
+	peerAs, err := strconv.Atoi(r.PeerASN)
+	if err != nil {
+		fmt.Println(Red("Could not parse PeerASN as string to int"))
+	}
+	m.peerID = findPeerIDbyIP(peerip, uint32(peerAs))
 
 	complLength := len(r.Withdrawals)
 	if len(r.Announcements) > 0 {
@@ -225,22 +227,8 @@ func handle(r *risMessageData) {
 		m.subnet = *ipnet
 		if m.subnet.IP.To4() != nil {
 			m.subnetAsBits = convertIPtoBits(m.subnet)
-			nodeWhereInserted := *ipv4T.insert(m)
 
-			if m.isAnnouncement {
-				conflictsField := make([]message, 0)
-
-				c := conflicts{
-					referenceIPasField:    convertIPtoBits(m.subnet),
-					referenceAnnouncement: m,
-					conflictingMessages:   conflictsField,
-				}
-				confl := nodeWhereInserted.findConflictsAboveAndSameLevel(c)
-				confl = nodeWhereInserted.findConflictsBelow(confl)
-				if len(confl.conflictingMessages) > 0 {
-					fmt.Println(Green(" Conflict found: " + confl.toString()))
-				}
-			}
+			insertAndFindConflicts(m, true)
 
 		}
 	}
