@@ -211,8 +211,8 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 					confl = nodeWhereInserted.findConflictsBelow(confl)
 					if len(confl.conflictingMessages) > 0 {
 						countConflicts = countConflicts + len(confl.conflictingMessages)
-						if countConflictTriggers == 100*countConflictTriggers100 {
-							countConflictTriggers100++
+						if countConflictTriggers == 1000*countConflictTriggers1000 {
+							countConflictTriggers1000++
 							fmt.Println(White("Messages that triggered conflicts so far: ", countConflictTriggers))
 						}
 						countConflictTriggers++
@@ -223,8 +223,8 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 					}
 				}
 
-				if countInserted == 10000*countInserted10000 {
-					countInserted10000++
+				if countInserted == 100000*countInserted100000 {
+					countInserted100000++
 					fmt.Println(Green("inserted messages so far: ", countInserted))
 				}
 				countInserted++

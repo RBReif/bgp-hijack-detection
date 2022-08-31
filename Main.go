@@ -16,6 +16,7 @@ import (
 //input
 var inputDirectory string //  our initial Routing Information Base and update files
 var rib string
+var findConflictsInRib bool
 
 //output
 var memProfileFile string
@@ -33,11 +34,11 @@ var buffer int
 var flagsString string
 var ipv4T ipv4trieRoot
 var countInserted int
-var countInserted10000 int
+var countInserted100000 int
 var stopT time.Time
 
 var countConflictTriggers int
-var countConflictTriggers100 int
+var countConflictTriggers1000 int
 var countConflicts int
 
 func parseFlags() {
@@ -45,6 +46,7 @@ func parseFlags() {
 	//input
 	flag.StringVar(&inputDirectory, "input", "", "If specified, directory containing initial routing information files. Expected filenames: [rib|updates].YYYYMMDD.HHMM{.bz2|.gz}")
 	flag.StringVar(&rib, "rib", "", "If specified, we read the specified RIB and all following update files. If not specified the newest RIB in the input directory is used. Expected format: rib.YYYYMMDD.HHMM{.bz2|.gz}")
+	flag.BoolVar(&findConflictsInRib, "ribconflicts", false, "If set to true a specified RIB will directly be analysed for conflicts. If set to false (default) only updates (from updates files or from a live feed can trigger conflicts")
 
 	//output
 	flag.StringVar(&cpuProfileFile, "cpuprofile", "output/cp", "Specifies the file to which a CPU profile shall be written to")

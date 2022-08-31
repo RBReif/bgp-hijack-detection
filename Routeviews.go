@@ -90,7 +90,7 @@ entries:
 				m.peerID = ourPeers[rib.Entries[i].PeerIndex].id //during the initialization PeerIndex should already be equal to id
 				setASpathInMessage(&m, rib.Entries[i].PathAttributes)
 
-				insertAndFindConflicts(m, false)
+				insertAndFindConflicts(m, findConflictsInRib)
 			}
 
 		default:

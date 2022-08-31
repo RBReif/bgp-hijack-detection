@@ -37,6 +37,7 @@ Individual names can be defined via flags (``-cpuprofile="myname"``, ``-memprofi
 * with ``-risclient="your usecase"`` you can specify for what purposes you connect to RIPE RIS
 * with ``-buffer=32000`` you can specify the maximum number of RIS messages to queue locally (in the exmaple to 32000)
 * with ``-stream="your URL"`` you can specify a different input livestream source, if needed
+* with ``-ribconflicts=true`` you can already find conflicts in a specified RIB file itself
 
 ### Current Status
 Currently, Hijackdetector already offers the following features:

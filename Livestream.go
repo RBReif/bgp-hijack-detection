@@ -217,7 +217,7 @@ func handle(r *risMessageData) {
 				m.finalDestinationAS = r.DigestedPath[len(r.DigestedPath)-1]
 			} else {
 				fmt.Println(Red("Digested Path length was 0!"))
-				fmt.Println(r.toString())
+				fmt.Println(Red(r.toString()))
 				return
 			}
 		}
