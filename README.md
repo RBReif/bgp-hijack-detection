@@ -18,7 +18,7 @@ During the traversal of the trie potential BGP Hijacks will be detected.
 1. Only for Live Analysis without reading and parsing RIBs or updates files first. This is the default: ``go run *.go``
 2. Only for Analysis of all updates files (e.g. "updates.20220826.1815.bz2") which followed a specific RIB (e.g. "rib.20220826.1800.bz2"), with all files being stored in one subdirectory (e.g. "input"): ``go run *.go -input="input" -rib="rib.20220826.1800.bz2" -live=false ``
 3. As a combination of both, where first a specific RIB is parsed, then updates files are parsed and analysed for conflicts and then the analysis continues with the livefeed ``go run *.go -input="input" -rib="rib.20220826.1800.bz2"  ``
-4. If you want the Live Analysis to stop at a specific point in time, you can do so with the flag -endLive: ``-endLive: 20220828.2000``
+4. If you want the Live Analysis to stop at a specific point in time, you can do so with the flag -endLive: ``-endLive=20220828.2000``
 
 ### RIB and updates files from Routeview.org
 Hijackdetector supports .bz2, gz, and normal file formats. The naming convention is YYYYMMDD.HHMM. 
@@ -38,6 +38,10 @@ Individual names can be defined via flags (``-cpuprofile="myname"``, ``-memprofi
 * with ``-buffer=32000`` you can specify the maximum number of RIS messages to queue locally (in the exmaple to 32000)
 * with ``-stream="your URL"`` you can specify a different input livestream source, if needed
 * with ``-ribconflicts=true`` you can already find conflicts in a specified RIB file itself
+
+### Stop the program
+With SIGTERM (e.g. Ctrl+C) you can gracefully end prgoram execution and print out some stats. 
+Livemode can also be ended the program with the ``-endlive`` Flag
 
 ### Current Status
 Currently, Hijackdetector already offers the following features:

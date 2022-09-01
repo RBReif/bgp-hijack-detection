@@ -155,7 +155,7 @@ restart:
 			err := dec.Decode(&rm)
 			switch {
 			case err != nil && err != io.EOF:
-				fmt.Println(err)
+				fmt.Println(Red(err))
 				fmt.Println(Red("bad json content: \n", rm.Data))
 
 				continue restart

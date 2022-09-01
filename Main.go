@@ -82,6 +82,7 @@ func parseFlags() {
 
 	flagsString = "Flags parsed: input = " + inputDirectory +
 		", rib = " + rib +
+		", findConflicts = " + strconv.FormatBool(findConflictsInRib) +
 		",\n" +
 		", cpuprofile = " + cpuProfileFile +
 		", memprofile = " + memProfileFile +
