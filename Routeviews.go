@@ -303,7 +303,7 @@ attrs:
 	}
 	m.aspath = bestASPath // we set the aspath attribute in message m
 	if bestASPath != nil {
-		m.finalDestinationAS = bestASPath[len(bestASPath)-1]
+		m.origin = bestASPath[len(bestASPath)-1]
 	} else {
 		fmt.Println("no best AS path specified. Could not set origin AS")
 	}
@@ -312,7 +312,7 @@ attrs:
 		copy(realAsPath, bestRealASPath)
 		realAsPath = append([]uint32{m.aspath[0]}, realAsPath...) // it seems that the as4path does not include the first AS number. We want to see the full path and prepend this AS number
 		m.aspath = realAsPath
-		m.finalDestinationAS = realAsPath[len(realAsPath)-1]
+		m.origin = realAsPath[len(realAsPath)-1]
 	}
 
 }

@@ -16,6 +16,8 @@ import (
 	"strconv"
 )
 
+var resp *http.Response
+
 // risLive is a struct to hold basic data used in connecting to the RIS Live service and managing data output/collection for the calling client.
 type risLive struct {
 	url     string
@@ -137,13 +139,14 @@ restart:
 		//todo check if needed
 
 		fmt.Println(Teal("Request Header: ", req.Header))
-		resp, err := client.Do(req)
+		resp, err = client.Do(req)
 		if err != nil {
 			fmt.Println(Red("failed to open the http client for action: %v", err))
 			return
 		}
 		fmt.Println(Teal("Response Header: ", resp.Header))
 		fmt.Println()
+		fmt.Println(Teal("\n\n----------------------------------------------------------------------------------------------------------------------------------"))
 		fmt.Println(Teal("Live Connection established...\n"))
 
 		defer resp.Body.Close()
@@ -214,7 +217,7 @@ func handle(r *risMessageData) {
 			_, ipnet, err = net.ParseCIDR(r.Announcements[0].Prefixes[i-len(r.Withdrawals)])
 			m.aspath = r.DigestedPath
 			if len(r.DigestedPath) > 0 {
-				m.finalDestinationAS = r.DigestedPath[len(r.DigestedPath)-1]
+				m.origin = r.DigestedPath[len(r.DigestedPath)-1]
 			} else {
 				fmt.Println(Red("Digested Path length was 0!"))
 				fmt.Println(Red(r.toString()))

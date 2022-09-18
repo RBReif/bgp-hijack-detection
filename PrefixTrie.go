@@ -45,7 +45,7 @@ func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 		for i := 0; i < len(prefixTrie.activeAnnouncments); i++ {
 
 			if m.isAnnouncement {
-				if prefixTrie.activeAnnouncments[i].finalDestinationAS == m.finalDestinationAS {
+				if prefixTrie.activeAnnouncments[i].origin == m.origin {
 					m.alreadyAnnounced = true // to prevent the same (still active) conflict to be found over and over again
 				}
 			}
@@ -98,12 +98,12 @@ func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 func (prefixTrie *ipv4trie) findConflictsThisLevel(c conflicts) conflicts {
 	if prefixTrie.activeAnnouncments != nil {
 		for i := len(prefixTrie.activeAnnouncments); i > 0; i-- { //we iterate over all announcements. from newest to oldest
-			if c.referenceAnnouncement.finalDestinationAS != prefixTrie.activeAnnouncments[i-1].finalDestinationAS { //it´s not a conflict if the final destination AS is the same
+			if c.referenceAnnouncement.origin != prefixTrie.activeAnnouncments[i-1].origin { //it´s not a conflict if the final destination AS is the same
 				//we have found a potential conflict
 
 				alreadyAConflictByDifferentPeer := false
 				for j := 0; j < len(c.conflictingMessages); j++ {
-					if c.conflictingMessages[j].finalDestinationAS == prefixTrie.activeAnnouncments[i-1].finalDestinationAS &&
+					if c.conflictingMessages[j].origin == prefixTrie.activeAnnouncments[i-1].origin &&
 						c.conflictingMessages[j].subnet.String() == prefixTrie.activeAnnouncments[i-1].subnet.String() {
 						alreadyAConflictByDifferentPeer = true
 					}
@@ -211,6 +211,8 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 					confl = nodeWhereInserted.findConflictsBelow(confl)
 					if len(confl.conflictingMessages) > 0 {
 						countConflicts = countConflicts + len(confl.conflictingMessages)
+						prepareJSON(confl)
+						updateSummary(confl)
 						if countConflictTriggers == 1000*countConflictTriggers1000 {
 							countConflictTriggers1000++
 							fmt.Println(White("Messages that triggered conflicts so far: ", countConflictTriggers))

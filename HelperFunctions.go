@@ -38,3 +38,19 @@ func IsContainedInUint32(slice []uint32, val uint32) bool { //a generic method t
 	}
 	return result
 }
+
+func aspathtoIntSlice(aspath []uint32) []int {
+	aspathAsString := make([]int, len(aspath))
+	for i := 0; i < len(aspath); i++ {
+		aspathAsString[i] = int(aspath[i])
+	}
+	return aspathAsString
+}
+
+func min(a int, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}

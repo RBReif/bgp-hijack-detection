@@ -9,7 +9,6 @@ type conflicts struct {
 func (conf conflicts) toString() string {
 	result := "announcement: " + conf.referenceAnnouncement.toString() + "\n"
 	result = result + " the following conflicts were detected: \n"
-	//result = result + " conflicts at same level: " + strconv.FormatBool(conf.thereAreConflictsAtSameLevel) + "\n"
 
 	for i := 0; i < len(conf.conflictingMessages); i++ {
 
