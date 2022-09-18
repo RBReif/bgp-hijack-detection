@@ -5,7 +5,7 @@ This project implements a (near) real-time detection of potential BGP Hijacks.
 In this project a potential BGP Hijack is defined as two BGP Update messages that announce subnets with at least on IP address in common, but with different Origin ASes.
 To achieve this, we connect to the RIPE Routing Information System (https://ris-live.ripe.net/) via a livestream.
 Additionally, we can parse RIB and updates files from Routeviews.org.
-For each Announcement and Withdrawal message relevant information (subnet, Origin AS, etc.) will be stored in a PATRICIA trie. 
+For each ANNOUNCEMENT and WITHDRAWAL message relevant information (subnet, Origin AS, etc.) will be stored in a PATRICIA trie. 
 During the traversal of the trie potential BGP Hijacks will be detected.
 
 ### Getting Started
@@ -27,34 +27,57 @@ The RIB and the updates files need to be in the same subdirectory.
 If no RIB is specified, Hijackdetector will automatically use the newest RIB and all following updates files.
 If no RIB is present in the specified subdirectory, all included updates files are parsed and analysed for conflicts.
 
+### Analysis of found conflicts
+All found conflicts will be written to a file.
+With ``-conflictsfile=yourFileName.json`` you can set the name and location of the file. (By default this file is called conflicts.json and located in the output directory).
+Every conflict consists of exactly one "referenceAnnouncement" (the update message, which triggered a conflict) and one or multiple "conflicts".
+Both the "referenceAnnouncement" and all "conflicts" are of the same type and consist of "subnet", "origin", "timestamp", and "aspath" (where "origin" is the last AS in "aspath).
+
+### Analysis of participating ASes
+All ASes which appear as "origin" in a conflicts will be written to a .csv file alongside further quantitative and qualitative attributes.
+With ``-originsfile=yourFileName.csv`` you can set the name and location of the file. (By default this file is called origins.csv and located in the output directory).
+The format is: asn, total, lessSpecificOrigin, sameSubnet, moreSpecificOrigin, legit, registry, country, ispName.
+* asn: the number of the autonomous systems, appearing as an origin-AS
+* total: the total number of appearances as an origin in a conflict. It equals lessSpecificOrigin+sameSubnet+moreSpecificOrigin
+* lessSpecificOrigin: the number of times in which the AS appeared as origin of the ANNOUNCEMENT for the less specific subnet. (A high number might indicate that this AS has been victim to a lot of BGP Hijacks.)
+* sameSubnet: the number of times in which the AS appeared as origin of an ANNOUNCEMENT in conflict with another ANNOUNCEMENT of exactly the same subnet
+* moreSpecificOrigin: the number of times in which the AS appeared as origin of the ANNOUNCEMENT for the more specific subnet. (A high number might indicate that this AS has been an attacker of a lot of BGP Hijacks.)
+* legit: the number of times in which one of the origins of two conflicting ANNOUNCEMENTs is in the AS-path of the other ANNOUNCEMENT, and hence indicating a topological (probably legit) relation
+* registry: the registry responsible for the AS
+* country: the country where the AS is positioned
+* ispName: the name of the corresponding Internet Service Provider. Note, that often the Country Code is included also in the end of the ISP name
+
+A short summary of the origin ASes for the most often appearing ASes is also printed after each run of Hijack Detector to standard output.
+For simplicity reasons "lessSpecificOrigin" is written as "victim", and "moreSpecificOrigin" is written as "attacker" in the printed overview.
+
 ### Analysing Memory and CPU consumption
 Hijack Detector offers support to keep track of memory and CPU consumption of the Hijackdetector. 
 You can enter the interactive analysis mode with ``go tool pprof PROFILENAME``. Per default the names of the profiles are cp (for the CPU profile) and mp (for the memory profile).
+By default they will be stored in the output directory.
 Individual names can be defined via flags (``-cpuprofile="myname"``, ``-memprofile="myothername"``).
 
 ### Further flags
 * with ``-verbose=true`` you can print out more information to standard output
 * with ``-risclient="your usecase"`` you can specify for what purposes you connect to RIPE RIS
 * with ``-buffer=32000`` you can specify the maximum number of RIS messages to queue locally (in the exmaple to 32000)
-* with ``-stream="your URL"`` you can specify a different input livestream source, if needed
+* with ``-stream="your livestream source URL"`` you can specify a different input livestream source, if needed
 * with ``-ribconflicts=true`` you can already find conflicts in a specified RIB file itself
+
 
 ### Stop the program
 With SIGTERM (e.g. Ctrl+C) you can gracefully end prgoram execution and print out some stats. 
-Livemode can also be ended the program with the ``-endlive`` Flag
+Livemode can also be ended the program with the ``-endlive`` flag
 
 ### Current Status
 Currently, Hijackdetector already offers the following features:
 * Livestream to RIPE RIS
 * Parsing of RIB files
 * Parsing of updates. files
-* Storing and inserting BGP update messages (both Announcements and Withdrawals) from above mentioned sources in a PATRICIA trie
+* Storing and inserting BGP update messages (both ANNOUNCEMENTS and WITHDRAWALS) from above mentioned sources in a PATRICIA trie
 * Conflict detection via traversing the trie
-* Peer Awareness (a Withdrawal message is only eliminating Announcement messages from the same peer)
-
-TODO: 
-* writing found conflicts in e.g. a JSON file
-* analysing found conflicts 
+* Peer Awareness (a WITHDRAWAL message is only eliminating ANNOUNCEMENT messages from the same peer)
+* Writing found conflicts in a .JSON file
+* Analysing ASes which were potentially a victim or an attacker during BGP hijacks (based on frequency, topological relations and retrieving background information)
 
 ## Acknowledgements
 

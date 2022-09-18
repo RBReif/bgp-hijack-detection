@@ -169,7 +169,7 @@ func writeOriginFrequencies() {
 		fmt.Println(Red("could not create csv file for frequencies of origin ASes"))
 		return
 	}
-	_, err = originsFile.WriteString("asn,total, lessSpecificOrigin,sameSubnet,moreSpecificOrigin,legit,registry,country,ispName\n")
+	_, err = originsFile.WriteString("asn,total,lessSpecificOrigin,sameSubnet,moreSpecificOrigin,legit,registry,country,ispName\n")
 	if err != nil {
 		fmt.Println(Red("Could not write to originsFile"))
 		return
