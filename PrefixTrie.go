@@ -17,6 +17,7 @@ type trie interface {
 	findConflictsAboveAndSameLevel(c conflicts) conflicts
 	toStringNode() string
 	toStringNodeAndSubtrie() string
+	isRelevant() bool
 }
 
 func (ipv4tr *ipv4trieRoot) insert(m message) *trie {
@@ -35,12 +36,22 @@ type ipv4trie struct { //represents one subnet in the IPv4 range
 	representedNet     []uint8
 	value              uint8 //0 or 1
 	activeAnnouncments []message
+	relevant           bool
+}
+
+func (prefixTrie *ipv4trie) isRelevant() bool {
+	return prefixTrie.relevant
 }
 
 func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 	subnetMaskLength, _ := m.subnet.Mask.Size()
 	var n trie = prefixTrie
+
 	if int(currentDepth) == subnetMaskLength { // right position in trie
+		if m.isSpecialPrefix {
+			prefixTrie.relevant = true
+			return &n
+		}
 
 		for i := 0; i < len(prefixTrie.activeAnnouncments); i++ {
 
@@ -83,7 +94,7 @@ func (prefixTrie *ipv4trie) insertMessage(m message, currentDepth uint8) *trie {
 			reprN := make([]uint8, len(prefixTrie.representedNet)+1)
 			copy(reprN, prefixTrie.representedNet)
 			reprN[len(prefixTrie.representedNet)] = nextBit
-			nextChild = &ipv4trie{parent: prefixTrie, value: nextBit, representedNet: reprN}
+			nextChild = &ipv4trie{parent: prefixTrie, value: nextBit, representedNet: reprN, relevant: prefixTrie.relevant}
 			if nextBit == 0 {
 				prefixTrie.childZero = nextChild
 			} else {
@@ -110,6 +121,9 @@ func (prefixTrie *ipv4trie) findConflictsThisLevel(c conflicts) conflicts {
 				}
 				if !alreadyAConflictByDifferentPeer {
 					c.conflictingMessages = append(c.conflictingMessages, prefixTrie.activeAnnouncments[i-1])
+					if prefixTrie.relevant {
+						c.relevant = true
+					}
 				}
 			}
 		}
@@ -206,6 +220,7 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 						referenceIPasField:    convertIPtoBits(m.subnet),
 						referenceAnnouncement: m,
 						conflictingMessages:   conflictsField,
+						relevant:              nodeWhereInserted.isRelevant(),
 					}
 					confl := nodeWhereInserted.findConflictsAboveAndSameLevel(c)
 					confl = nodeWhereInserted.findConflictsBelow(confl)
@@ -221,6 +236,10 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 
 						if verbose {
 							fmt.Println(White(confl.toString()))
+						}
+						if confl.relevant {
+							fmt.Println(Magenta("Relevant Conflict detected."))
+							fmt.Println(Magenta(confl.toString()))
 						}
 					}
 				}

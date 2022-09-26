@@ -19,6 +19,7 @@ During the traversal of the trie potential BGP Hijacks will be detected.
 2. Only for Analysis of all updates files (e.g. "updates.20220826.1815.bz2") which followed a specific RIB (e.g. "rib.20220826.1800.bz2"), with all files being stored in one subdirectory (e.g. "input"): ``go run *.go -input="input" -rib="rib.20220826.1800.bz2" -live=false ``
 3. As a combination of both, where first a specific RIB is parsed, then updates files are parsed and analysed for conflicts and then the analysis continues with the livefeed ``go run *.go -input="input" -rib="rib.20220826.1800.bz2"  ``
 4. If you want the Live Analysis to stop at a specific point in time, you can do so with the flag -endLive: ``-endLive=20220828.2000``
+5. If you want an alert system for printing out conflicts involving any one of a list of predefined prefixes use ``go run *.go -prefixesfile="input/mySpecialPrefixes"``
 
 ### RIB and updates files from Routeview.org
 Hijackdetector supports .bz2, gz, and normal file formats. The naming convention is YYYYMMDD.HHMM. 
@@ -26,6 +27,10 @@ To sum it up the following file names are acceptable: [rib|updates].YYYYMMDD.HHM
 The RIB and the updates files need to be in the same subdirectory.
 If no RIB is specified, Hijackdetector will automatically use the newest RIB and all following updates files.
 If no RIB is present in the specified subdirectory, all included updates files are parsed and analysed for conflicts.
+
+### Special monitoring of predefined prefixes
+With the ``-prefixesfile`` flag, it is possible to provide a list of prefixes where any conflict involving one announcement for such a prefix (or a more specific prefix) gets directly printed out to standard output.
+The file is expected to contain one IPv4 prefix per line with the network address followed by a slash (/) and the subnet length.
 
 ### Analysis of found conflicts
 All found conflicts will be written to a file.
@@ -78,6 +83,7 @@ Currently, Hijackdetector already offers the following features:
 * Peer Awareness (a WITHDRAWAL message is only eliminating ANNOUNCEMENT messages from the same peer)
 * Writing found conflicts in a .JSON file
 * Analysing ASes which were potentially a victim or an attacker during BGP hijacks (based on frequency, topological relations and retrieving background information)
+* Additional, special monitoring of conflicts inside specified prefixes is now also implemented
 
 ## Acknowledgements
 

@@ -4,6 +4,7 @@ type conflicts struct {
 	referenceIPasField    []uint8 //representing the node from which we want to start to find Conflicts
 	referenceAnnouncement message //BGP update which triggered a conflict
 	conflictingMessages   []message
+	relevant              bool
 }
 
 func (conf conflicts) toString() string {
@@ -15,7 +16,7 @@ func (conf conflicts) toString() string {
 		result = result + "    " + conf.conflictingMessages[i].toString() + "\n"
 
 	}
-	result = result + "\n" + "\n"
+	result = result
 	return result
 
 }

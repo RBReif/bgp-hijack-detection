@@ -15,7 +15,8 @@ type message struct {
 	aspath           []uint32 // AS path, as written in the AS-path field of the BGP message, only relevant if the message is an announcement
 	alreadyAnnounced bool     //prevents that the same (still active) conflict is found over and over again by the same update message
 
-	isAnnouncement bool // false => message is a withdrawal
+	isAnnouncement  bool // false => message is a withdrawal
+	isSpecialPrefix bool
 }
 
 func (m message) toStringNewlines() string {

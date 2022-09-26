@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -53,4 +55,16 @@ func min(a int, b int) int {
 	} else {
 		return b
 	}
+}
+
+//seen on StackOverflow: https://stackoverflow.com/questions/12518876/how-to-check-if-a-file-exists-in-go
+func Exists(name string) (bool, error) {
+	_, err := os.Stat(name)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
