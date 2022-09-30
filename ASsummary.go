@@ -8,11 +8,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const originOfLessSpecific = 0
 const sameSubnet = 1
 const originOfMoreSpecific = 2
+
+var recentFilesCounter = 1
 
 var originCounters map[uint32]*originCounter
 
@@ -22,6 +25,11 @@ type originCounter struct {
 	counterMoreSpecific uint32 //potential attacker
 	counterSameSubnet   uint32 //
 
+	counterLessSpecificRecent    uint32 //potential victim
+	counterMoreSpecificRecent    uint32 //potential attacker
+	counterSameSubnetRecent      uint32 //
+	topographicallyRelatedRecent uint32
+
 	country                string
 	registry               string
 	isp                    string
@@ -29,18 +37,23 @@ type originCounter struct {
 }
 
 func updateOriginCounter(asn uint32, level uint32, inPathofOther bool) {
+	mutex.Lock()
 	v, ok := originCounters[asn]
 	if ok {
 		switch level {
 		case originOfLessSpecific:
 			v.counterLessSpecific++
+			v.counterLessSpecificRecent++
 		case sameSubnet:
 			v.counterSameSubnet++
+			v.counterSameSubnetRecent++
 		case originOfMoreSpecific:
 			v.counterMoreSpecific++
+			v.counterMoreSpecificRecent++
 		}
 		if inPathofOther {
 			v.topographicallyRelated++
+			v.topographicallyRelatedRecent++
 		}
 
 	} else {
@@ -65,15 +78,37 @@ func updateOriginCounter(asn uint32, level uint32, inPathofOther bool) {
 		switch level {
 		case originOfLessSpecific:
 			newCounter.counterLessSpecific++
+			newCounter.counterLessSpecificRecent++
 		case sameSubnet:
 			newCounter.counterSameSubnet++
+			newCounter.counterSameSubnetRecent++
 		case originOfMoreSpecific:
 			newCounter.counterMoreSpecific++
+			newCounter.counterMoreSpecificRecent++
 		}
 		if inPathofOther {
 			newCounter.topographicallyRelated++
+			newCounter.topographicallyRelatedRecent++
 		}
 		originCounters[asn] = &newCounter
+
+	}
+	mutex.Unlock()
+}
+
+func checkForTimeIntervall(intervall int) {
+	for range time.Tick(time.Minute * time.Duration(intervall)) {
+		fmt.Println(Teal("Printing next rough overview of origin AS activity in the last ", strconv.Itoa(intervall), " minutes. [", time.Now().String(), "]"))
+		writeRecentOriginFrequencies()
+		mutex.Lock()
+		for as := range originCounters {
+			originCounters[as].counterSameSubnetRecent = 0
+			originCounters[as].counterMoreSpecificRecent = 0
+			originCounters[as].counterLessSpecificRecent = 0
+			originCounters[as].topographicallyRelatedRecent = 0
+		}
+		mutex.Unlock()
+		fmt.Println(Teal("Finished printing of rough overview of most recent origin ASes activities. [", time.Now().String(), "]"))
 
 	}
 }
@@ -135,6 +170,13 @@ func printShortSummary() {
 	})
 	printTopAS(10, asSlice)
 
+	fmt.Println()
+	fmt.Println(Teal("Most often as origin in conflicts without topological relation based on AS path"))
+	sort.Slice(asSlice, func(i, j int) bool {
+		return originCounters[asSlice[i]].counterMoreSpecific+originCounters[asSlice[i]].counterSameSubnet+originCounters[asSlice[i]].counterLessSpecific-originCounters[asSlice[i]].topographicallyRelated > originCounters[asSlice[j]].counterMoreSpecific+originCounters[asSlice[j]].counterSameSubnet+originCounters[asSlice[j]].counterLessSpecific-originCounters[asSlice[j]].topographicallyRelated
+	})
+	printTopAS(10, asSlice)
+
 }
 
 func printTopAS(n int, asSlice []uint32) {
@@ -155,6 +197,7 @@ func printTopAS(n int, asSlice []uint32) {
 }
 
 func writeOriginFrequencies() {
+	mutex.Lock()
 	asSlice := make([]uint32, 0, len(originCounters))
 	for as := range originCounters {
 		asSlice = append(asSlice, as)
@@ -164,7 +207,7 @@ func writeOriginFrequencies() {
 	})
 
 	var err error
-	originsFile, err = os.Create(originsFileName)
+	originsFile, err = os.Create(originsFileName + ".csv")
 	if err != nil {
 		fmt.Println(Red("could not create csv file for frequencies of origin ASes"))
 		return
@@ -184,25 +227,47 @@ func writeOriginFrequencies() {
 			fmt.Println(Red("Could not write to originsFile"))
 			return
 		}
-		/*	resp, err := ipisp.LookupASN(context.Background(), ipisp.ASN(asSlice[i]))
-			if err != nil {
-				fmt.Println(Red("Lookup for ASN: ", asSlice[i], " did not work: ", err))
-				_, err2 := originsFile.WriteString(",-,-,-\n")
-				if err2 != nil {
-					fmt.Println(Red("Could not write to originsFile", err2))
-					return
-				}
-			} else {
-				_, err2 := originsFile.WriteString("," + resp.Registry + "," + resp.Country + "," + strings.ReplaceAll(resp.ISPName, ",", "") + "\n")
-				if err2 != nil {
-					fmt.Println(Red("Could not write to originsFile", err2))
-					return
-				}
-			}
-
-		*/
 
 	}
-	defer conflictsFile.Close()
+	defer originsFile.Close()
+	mutex.Unlock()
 
+}
+
+func writeRecentOriginFrequencies() {
+	mutex.Lock()
+	asSlice := make([]uint32, 0, len(originCounters))
+	for as := range originCounters {
+		asSlice = append(asSlice, as)
+	}
+	sort.Slice(asSlice, func(i, j int) bool {
+		return originCounters[asSlice[i]].counterMoreSpecificRecent+originCounters[asSlice[i]].counterSameSubnetRecent+originCounters[asSlice[i]].counterLessSpecificRecent > originCounters[asSlice[j]].counterMoreSpecificRecent+originCounters[asSlice[j]].counterSameSubnetRecent+originCounters[asSlice[j]].counterLessSpecificRecent
+	})
+
+	var err error
+	originsFile, err = os.Create(originsFileName + strconv.Itoa(recentFilesCounter) + ".csv")
+	recentFilesCounter++
+	if err != nil {
+		fmt.Println(Red("could not create csv file for frequencies of origin ASes"))
+		return
+	}
+	_, err = originsFile.WriteString("asn,total,lessSpecificOrigin,sameSubnet,moreSpecificOrigin,legit,registry,country,ispName\n")
+	if err != nil {
+		fmt.Println(Red("Could not write to originsFile"))
+		return
+	}
+
+	for i := 0; i < len(asSlice); i++ {
+		counterTotal := originCounters[asSlice[i]].counterLessSpecificRecent + originCounters[asSlice[i]].counterSameSubnetRecent + originCounters[asSlice[i]].counterMoreSpecificRecent
+		//legitPercentage := originCounters[asSlice[i]].topographicallyRelated / counterTotal
+		_, err = originsFile.WriteString("" + strconv.Itoa(int(originCounters[asSlice[i]].asn)) + "," + strconv.Itoa(int(counterTotal)) + "," + strconv.Itoa(int(originCounters[asSlice[i]].counterLessSpecificRecent)) + "," + strconv.Itoa(int(originCounters[asSlice[i]].counterSameSubnetRecent)) + "," + strconv.Itoa(int(originCounters[asSlice[i]].counterMoreSpecificRecent)) + "," + strconv.Itoa(int(originCounters[asSlice[i]].topographicallyRelatedRecent)) +
+			"," + originCounters[asSlice[i]].registry + "," + originCounters[asSlice[i]].country + "," + originCounters[asSlice[i]].isp + "\n")
+		if err != nil {
+			fmt.Println(Red("Could not write to originsFile"))
+			return
+		}
+
+	}
+	defer originsFile.Close()
+	mutex.Unlock()
 }

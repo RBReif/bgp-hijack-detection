@@ -22,7 +22,8 @@ During the traversal of the trie potential BGP Hijacks will be detected.
 5. If you want an alert system for printing out conflicts involving any one of a list of predefined prefixes use ``go run *.go -prefixesfile="input/mySpecialPrefixes"``
 
 ### RIB and updates files from Routeview.org
-Hijackdetector supports .bz2, gz, and normal file formats. The naming convention is YYYYMMDD.HHMM. 
+Hijackdetector supports .bz2, gz, and uncompressed files. The naming convention is YYYYMMDD.HHMM. 
+The expected format is the Multi-Threaded Routing Toolkit (MRT). Further information about it can be found in RFCs 6396, 6397, and 8050.
 To sum it up the following file names are acceptable: [rib|updates].YYYYMMDD.HHMM[bz2|gz|]
 The RIB and the updates files need to be in the same subdirectory.
 If no RIB is specified, Hijackdetector will automatically use the newest RIB and all following updates files.
@@ -40,7 +41,7 @@ Both the "referenceAnnouncement" and all "conflicts" are of the same type and co
 
 ### Analysis of participating ASes
 All ASes which appear as "origin" in a conflicts will be written to a .csv file alongside further quantitative and qualitative attributes.
-With ``-originsfile=yourFileName.csv`` you can set the name and location of the file. (By default this file is called origins.csv and located in the output directory).
+With ``-originsfile=yourFileName`` you can set the name and location of the file. (By default this file is called origins.csv and located in the output directory).
 The format is: asn, total, lessSpecificOrigin, sameSubnet, moreSpecificOrigin, legit, registry, country, ispName.
 * asn: the number of the autonomous systems, appearing as an origin-AS
 * total: the total number of appearances as an origin in a conflict. It equals lessSpecificOrigin+sameSubnet+moreSpecificOrigin
@@ -51,6 +52,10 @@ The format is: asn, total, lessSpecificOrigin, sameSubnet, moreSpecificOrigin, l
 * registry: the registry responsible for the AS
 * country: the country where the AS is positioned
 * ispName: the name of the corresponding Internet Service Provider. Note, that often the Country Code is included also in the end of the ISP name
+
+In addition to the final anlysis file of participating origins, a periodic similar file is regularly created after X minutes. 
+X can be set with the ``-interval=X`` flag. These files contain the same .csv format and use the same filename (prepended with a numeric counter).
+Only newly added conflicts that occurred during the last X minutes are considered for these files.
 
 A short summary of the origin ASes for the most often appearing ASes is also printed after each run of Hijack Detector to standard output.
 For simplicity reasons "lessSpecificOrigin" is written as "victim", and "moreSpecificOrigin" is written as "attacker" in the printed overview.

@@ -9,6 +9,7 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -35,6 +36,7 @@ var endLiveStream string
 var liveStream string
 var risClient string
 var buffer int
+var writeInterval int
 
 //var routeCollector string
 
@@ -45,6 +47,7 @@ var countInserted int
 var countInserted100000 int
 var startT time.Time
 var stopT time.Time
+var mutex *sync.Mutex
 
 var countConflictTriggers int
 var countConflictTriggers1000 int
@@ -61,15 +64,16 @@ func parseFlags() {
 	//output
 	flag.StringVar(&cpuProfileFile, "cpuprofile", "output/cp", "Specifies the file to which a CPU profile shall be written to")
 	flag.StringVar(&memProfileFile, "memprofile", "output/mp", "Specifies the file to which a memory profile shall be written to")
-	flag.StringVar(&conflictsFileName, "conflictsfile", "output/conflicts.json", "Specifies the file to which found results shall be written to (in Json)")
-	flag.StringVar(&originsFileName, "originsfile", "output/origins.csv", "Specifies the file to which frequencies of origin ASes shall be written to (in CSV)")
+	flag.StringVar(&conflictsFileName, "conflictsfile", "output/conflicts", "Specifies the file to which found results shall be written to (in Json)")
+	flag.StringVar(&originsFileName, "originsfile", "output/origins", "Specifies the file to which frequencies of origin ASes shall be written to (in CSV)")
 	flag.BoolVar(&verbose, "verbose", false, "If true we print out found conflicts directly. Defaults to false")
+	flag.IntVar(&writeInterval, "interval", 20, "Specifies the interval after which a ")
 
 	//live
 	flag.BoolVar(&liveMode, "live", true, "Indicates if we work in live mode. If in Live mode, input stream has to be specified. If not in live mode, update file has to be specified. Defaults to true")
 	flag.StringVar(&liveStream, "stream", "https://ris-live.ripe.net/v1/stream/?format=json", "RIS Live firehose url")
 	flag.IntVar(&buffer, "buffer", 10000, "Max depth of Ris messages to queue.")
-	flag.StringVar(&risClient, "risclient", "analysis tool for BGP Hijacks for Summer of Code project of BND", "RIS Live client description")
+	flag.StringVar(&risClient, "risclient", "Analysis tool for BGP Hijacks for Summer of Code project of BND", "RIS Live client description")
 	flag.StringVar(&endLiveStream, "endlive", "", "If specified, we end the livestream at this time. Expected format: YYYYMMDD.HHMM")
 	//flag.StringVar(&routeCollector, "routecollector", "", "If specified only use live stream data from collector with this ID. (expected format: rrcXX). If none is specified, all collectors are included.")
 
@@ -93,22 +97,27 @@ func parseFlags() {
 		stopT = time.Time{}
 	}
 
-	flagsString = "Flags parsed: input = " + inputDirectory +
-		", rib = " + rib +
-		", findConflicts = " + strconv.FormatBool(findConflictsInRib) +
-		", prefixesFile = " + prefixesFileName +
+	flagsString = "----------------------------------------------------------------------------------------------------------------------------------\n" +
+		"Flags parsed:\n input = " + inputDirectory +
+		",\n rib = " + rib +
+		",\n findConflicts = " + strconv.FormatBool(findConflictsInRib) +
+		",\n prefixesFile = " + prefixesFileName +
+		"\n" +
+		"\n cpuprofile = " + cpuProfileFile +
+		",\n memprofile = " + memProfileFile +
+		",\n verbose = " + strconv.FormatBool(verbose) +
+		",\n conflictsFile = " + conflictsFileName +
+		",\n originsFile = " + originsFileName +
+		",\n interval = " + strconv.Itoa(writeInterval) +
 		",\n" +
-		", cpuprofile = " + cpuProfileFile +
-		", memprofile = " + memProfileFile +
-		", verbose = " + strconv.FormatBool(verbose) +
-		", conflictsFile = " + conflictsFileName +
-		", originsFile = " + originsFileName +
-		",\n" +
-		"live = " + strconv.FormatBool(liveMode) +
-		", endlive = " + endLiveStream +
-		", stream = " + liveStream +
+		"\n live = " + strconv.FormatBool(liveMode) +
+		",\n endlive = " + endLiveStream +
+		",\n stream = " + liveStream +
+		",\n risclient = " + risClient +
 		//", routecollector= " + routeCollector+
-		", buffer = " + strconv.Itoa(buffer)
+		",\n buffer = " + strconv.Itoa(buffer) + "\n" +
+		"----------------------------------------------------------------------------------------------------------------------------------\n"
+
 	fmt.Println(Teal(flagsString))
 }
 
@@ -263,7 +272,7 @@ func main() {
 	}()
 
 	var err error
-	conflictsFile, err = os.Create(conflictsFileName)
+	conflictsFile, err = os.Create(conflictsFileName + ".json")
 	if err != nil {
 		fmt.Println(Red("could not create JSON file for found conflicts"))
 		return
@@ -276,7 +285,12 @@ func main() {
 	}
 
 	if liveMode {
-		fmt.Println(Teal("\nStarted Connection to RIPE RIS..."))
+		fmt.Println(Teal("----------------------------------------------------------------------------------------------------------------------------------\n"))
+
+		fmt.Println(Teal("Started Connection to RIPE RIS...\n"))
+
+		mutex = &sync.Mutex{}
+		go checkForTimeIntervall(writeInterval)
 		for {
 			runLivestream()
 		}

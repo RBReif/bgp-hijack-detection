@@ -125,7 +125,7 @@ restart:
 	for {
 		var body io.ReadCloser
 
-		fmt.Println(Teal("Reading from the firehose..."))
+		fmt.Println(Teal("Connecting..."))
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", r.url, nil)
 		if err != nil {
@@ -138,16 +138,15 @@ restart:
 		req.Header.Add("X-RIS-Subscribe", filter) //Some times the RIPE RIS livestream has problems when answering if there is this header present
 		//todo check if needed
 
-		fmt.Println(Teal("Request Header: ", req.Header))
+		//fmt.Println(Teal("Request Header: ", req.Header))
 		resp, err = client.Do(req)
 		if err != nil {
 			fmt.Println(Red("failed to open the http client for action: %v", err))
 			return
 		}
-		fmt.Println(Teal("Response Header: ", resp.Header))
-		fmt.Println()
-		fmt.Println(Teal("\n\n----------------------------------------------------------------------------------------------------------------------------------"))
-		fmt.Println(Teal("Live Connection established...\n"))
+		//fmt.Println(Teal("Response Header: ", resp.Header))
+		//fmt.Println()
+		fmt.Println(Teal("Live Connection established..."))
 
 		defer resp.Body.Close()
 		body = resp.Body
