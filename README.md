@@ -60,6 +60,12 @@ Only newly added conflicts that occurred during the last X minutes are considere
 A short summary of the origin ASes for the most often appearing ASes is also printed after each run of Hijack Detector to standard output.
 For simplicity reasons "lessSpecificOrigin" is written as "victim", and "moreSpecificOrigin" is written as "attacker" in the printed overview.
 
+### Ordering participating origin ASes with sortOrigins.sh Script
+With the Bash script "sortOrigins.sh" one can provide one or more originsfiles (both the final one or the interval-files).
+Then these files are used to create four new files. One ordered by occurrences as origin as potential victim, potential attacker, in a conflict for the same subnet, and based on conflicts without topological relation.
+One can either provide a number Y of when to cut off the top Y origins for each file, or one can use the "all" keyword to write out all origins.
+Example usage: `` ./sortOrigins.sh all *origins.csv``.
+
 ### Analysing Memory and CPU consumption
 Hijack Detector offers support to keep track of memory and CPU consumption of the Hijackdetector. 
 You can enter the interactive analysis mode with ``go tool pprof PROFILENAME``. Per default the names of the profiles are cp (for the CPU profile) and mp (for the memory profile).
