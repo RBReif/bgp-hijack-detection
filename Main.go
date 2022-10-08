@@ -67,7 +67,7 @@ func parseFlags() {
 	flag.StringVar(&conflictsFileName, "conflictsfile", "output/conflicts", "Specifies the file to which found results shall be written to (in Json)")
 	flag.StringVar(&originsFileName, "originsfile", "output/origins", "Specifies the file to which frequencies of origin ASes shall be written to (in CSV)")
 	flag.BoolVar(&verbose, "verbose", false, "If true we print out found conflicts directly. Defaults to false")
-	flag.IntVar(&writeInterval, "interval", 20, "Specifies the interval after which a ")
+	flag.IntVar(&writeInterval, "interval", 20, "Specifies the interval after which a new originsfile gets written")
 
 	//live
 	flag.BoolVar(&liveMode, "live", true, "Indicates if we work in live mode. If in Live mode, input stream has to be specified. If not in live mode, update file has to be specified. Defaults to true")
@@ -124,6 +124,7 @@ func parseFlags() {
 func cleanup() {
 	fmt.Println(Teal("\n\n----------------------------------------------------------------------------------------------------------------------------------"))
 	fmt.Println(Teal("Stopping of program was initiated\n"))
+	//PrintMemUsage()
 
 	if memProfileFile != "" {
 		f, err := os.Create(memProfileFile)

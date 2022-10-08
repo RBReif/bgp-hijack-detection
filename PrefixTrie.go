@@ -238,13 +238,15 @@ func insertAndFindConflicts(m message, findConflicts bool) {
 							fmt.Println(White(confl.toString()))
 						}
 						if confl.relevant {
+							fmt.Println()
 							fmt.Println(Magenta("Relevant Conflict detected."))
 							fmt.Println(Magenta(confl.toString()))
 							fmt.Println(Magenta("Involved Origin ASes: "))
-							fmt.Println(Magenta(originCounters[confl.referenceAnnouncement.origin].isp))
+							fmt.Println(Magenta("  ", confl.referenceAnnouncement.origin, " = ", originCounters[confl.referenceAnnouncement.origin].isp))
 							for _, j := range confl.conflictingMessages {
-								fmt.Println(Magenta(originCounters[j.origin].isp))
+								fmt.Println(Magenta("  ", j.origin, " = ", originCounters[j.origin].isp))
 							}
+							fmt.Println()
 						}
 					}
 				}
