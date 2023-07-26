@@ -280,6 +280,8 @@ func main() {
 	}
 	defer conflictsFile.Close()
 
+	mutex = &sync.Mutex{}
+
 	if inputDirectory != "" {
 		fmt.Println(Teal("\nStarted parsing of Routeviews..."))
 		processBGPFiles()
@@ -290,7 +292,6 @@ func main() {
 
 		fmt.Println(Teal("Started Connection to RIPE RIS...\n"))
 
-		mutex = &sync.Mutex{}
 		go checkForTimeIntervall(writeInterval)
 		for {
 			runLivestream()
